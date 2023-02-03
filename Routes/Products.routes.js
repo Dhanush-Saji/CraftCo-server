@@ -5,6 +5,7 @@ const {Categorymodel} = require('../Modals/Category.modal.js');
 const { data } = require("../data/data");
 
 productRouter.get("/", async(req, res) => {
+  // res.send(req.query.category)
   var query = {};
   if(req.query.category){
     req.query.category.indexOf('tote') != -1?req.query.category[req.query.category.indexOf('tote')] = '63d05de41f9a7d7eec2037d7':null
@@ -20,24 +21,18 @@ productRouter.get("/", async(req, res) => {
   if(req.query.cancellable){
     query.cancellable = { $in: req.query.cancellable }
   }
-  if(req.query.price){
-    let price = req.query.price;
-    let priceQuery = [];
-    price.forEach(function(priceRange) {
-      let range = priceRange.split("-");
-      let min = range[0];
-      let max = range[1];
-      if(min && max) {
-        priceQuery.push({price: { $gte: min, $lte: max }});
-      } else if(min && !max) {
-        priceQuery.push({price: { $gte: min }});
-      }
+  if (req.query.price) {
+    const prices = Array.isArray(req.query.price) ? req.query.price : [req.query.price];
+    query["$and"] = prices.map((priceRange) => {
+      const [min, max] = priceRange.split("-");
+      return min && max
+        ? { price: { $gte: min, $lte: max } }
+        : { price: { $gte: min } };
     });
-    query['$and'] = priceQuery;
   }
   let sort={};
   if(req.query.sort){
-    sort = req.query.sort == 'asc'?{price:1}:req.query.sort == 'pop'?{popular:1}:{price:-1}
+    sort = req.query.sort == 'asc'?{price:1}:req.query.sort == 'reset'?{}:req.query.sort == 'pop'?{popular:1}:{price:-1}
   }
   try {
       
